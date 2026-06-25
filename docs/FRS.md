@@ -69,7 +69,7 @@
   - On success: generate JWT access token (exp 15 min, signed with JWT_SECRET from env) AND opaque 64-char refresh token
   - Persist refresh token in DB with `{ userId, token, expiresAt, revokedAt: null }`
   - Refresh token expires in 7 days
-- **Success response:** 200 with `{ accessToken, refreshToken, user: { id, email } }`
+- **Success response:** 200 with `{ accessToken, user: { id, email } }` (refreshToken set via httpOnly cookie — see AB-1002 spec.md decision 1)
 - **Errors:**
   - 400 VALIDATION_FAILED — invalid input shape
   - 401 AUTH_INVALID_CREDENTIALS — wrong password OR unknown email (same code; never leak account existence)
@@ -79,27 +79,26 @@
 
 ### FR-AUTH-3: Refresh token rotates on use [AB-1002]
 - **Endpoint:** POST /auth/refresh
-- **Validation:** body `{ refreshToken: string }`
+- **Validation:** `refreshToken` httpOnly cookie (sent automatically by browser; no request body needed)
 - **Behavior:**
   - Look up refresh token in DB
   - Reject if expired, revoked, or unknown
   - In a single DB transaction: mark old token `revokedAt = now`, issue new pair
-- **Success response:** 200 with `{ accessToken, refreshToken }`
+- **Success response:** 200 with `{ accessToken }` (refreshToken set via httpOnly cookie — see AB-1002 spec.md decision 1)
 - **Errors:**
-  - 400 VALIDATION_FAILED — missing refreshToken
-  - 401 AUTH_REFRESH_INVALID — expired, revoked, or unknown token
+  - 401 AUTH_REFRESH_INVALID — missing, expired, revoked, or unknown token
 - **Atomicity:** rotation MUST be a single Prisma transaction
 - **Acceptance:** scenarios AUTH-REFRESH-S1..S3 pass; rotation transaction confirmed in tests; reused old token returns 401
 
 ### FR-AUTH-4: Logout revokes refresh token [AB-1002]
 - **Endpoint:** POST /auth/logout
 - **Auth:** requires valid access token
-- **Validation:** body `{ refreshToken: string }`
+- **Validation:** `refreshToken` httpOnly cookie (sent automatically by browser; no request body needed)
 - **Behavior:** sets `revokedAt = now` on the given refresh token. Idempotent — already-revoked token still returns success.
 - **Success response:** 204 No Content
 - **Errors:**
-  - 400 VALIDATION_FAILED — missing refreshToken
   - 401 AUTH_TOKEN_INVALID — no/bad access token
+  - missing refreshToken cookie → 204 No Content (idempotent)
 - **Acceptance:** scenarios AUTH-LOGOUT-S1..S2 pass; logout of already-revoked token returns 204
 
 ### FR-AUTH-5: Forgot password sends 6-digit OTP [AB-1003]
