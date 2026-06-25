@@ -1,0 +1,321 @@
+openapi: "3.1.0"
+info:
+  title: NoteApp Auth Delta
+  version: AB-1002
+  description: |
+    Endpoints introduced by AB-1002: Register, Login, Refresh, Logout.
+    Note: FR-AUTH-2/3/4 amended — refresh token transported via httpOnly
+    cookie only (Set-Cookie), not in response body.
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user account
+      operationId: authRegister
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: Password1
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreatedResponse'
+              example:
+                id: clxyz123abc
+                email: user@example.com
+                createdAt: "2026-06-25T10:00:00Z"
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '409':
+          $ref: '#/components/responses/UserExists'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/login:
+    post:
+      summary: Login and receive access token + refresh cookie
+      operationId: authLogin
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: Password1
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: |
+                HttpOnly refresh token cookie (7-day expiry).
+                Format: refreshToken=<64-char-opaque>; HttpOnly; SameSite=Strict; Path=/auth; Max-Age=604800
+                Secure flag added in production.
+              schema:
+                type: string
+                example: "refreshToken=abc123...; HttpOnly; SameSite=Strict; Path=/auth; Max-Age=604800"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9...
+                user:
+                  id: clxyz123abc
+                  email: user@example.com
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token and get new access token
+      operationId: authRefresh
+      tags: [Auth]
+      description: |
+        Reads the `refreshToken` httpOnly cookie sent automatically by the browser.
+        No request body required. Old token is revoked and a new cookie is set in
+        a single atomic DB transaction.
+      parameters:
+        - in: cookie
+          name: refreshToken
+          required: true
+          schema:
+            type: string
+            description: Opaque 64-char refresh token (set by /auth/login)
+      responses:
+        '200':
+          description: Token rotated successfully
+          headers:
+            Set-Cookie:
+              description: New rotated refreshToken cookie; old token is revoked
+              schema:
+                type: string
+                example: "refreshToken=xyz789...; HttpOnly; SameSite=Strict; Path=/auth; Max-Age=604800"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9...
+        '401':
+          $ref: '#/components/responses/RefreshInvalid'
+
+  /auth/logout:
+    post:
+      summary: Revoke refresh token and clear cookie
+      operationId: authLogout
+      tags: [Auth]
+      description: |
+        Reads the `refreshToken` httpOnly cookie. Sets revokedAt in DB and
+        clears the cookie via Max-Age=0. Idempotent — already-revoked token
+        still returns 204.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: cookie
+          name: refreshToken
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Logged out successfully; cookie cleared
+          headers:
+            Set-Cookie:
+              description: Clears the refreshToken cookie (Max-Age=0)
+              schema:
+                type: string
+                example: "refreshToken=; HttpOnly; SameSite=Strict; Path=/auth; Max-Age=0"
+        '401':
+          $ref: '#/components/responses/TokenInvalid'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token, expires in 15 minutes
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Valid email address
+        password:
+          type: string
+          minLength: 8
+          description: Min 8 chars; must contain at least 1 digit
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+
+    UserCreatedResponse:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: string
+          description: cuid2 identifier
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 UTC
+
+    LoginResponse:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT; expires in 15 minutes
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id:
+              type: string
+              description: cuid2 identifier
+            email:
+              type: string
+              format: email
+
+    RefreshResponse:
+      type: object
+      required: [accessToken]
+      properties:
+        accessToken:
+          type: string
+          description: New JWT; expires in 15 minutes
+
+    ErrorResponse:
+      type: object
+      description: RFC 7807 Problem Detail
+      required: [type, title, status, detail, code]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: https://api.example.com/errors/VALIDATION_FAILED
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+
+  responses:
+    ValidationFailed:
+      description: Request body failed Zod validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/VALIDATION_FAILED
+            title: Validation failed
+            status: 400
+            detail: password must contain at least 1 number
+            code: VALIDATION_FAILED
+
+    UserExists:
+      description: Email already registered
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/USER_EXISTS
+            title: User already exists
+            status: 409
+            detail: An account with this email already exists
+            code: USER_EXISTS
+
+    InvalidCredentials:
+      description: |
+        Wrong password OR unknown email — identical response for both
+        (never leak account existence)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/AUTH_INVALID_CREDENTIALS
+            title: Invalid credentials
+            status: 401
+            detail: Invalid email or password
+            code: AUTH_INVALID_CREDENTIALS
+
+    RefreshInvalid:
+      description: Refresh token is missing, expired, revoked, or unknown
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/AUTH_REFRESH_INVALID
+            title: Refresh token invalid
+            status: 401
+            detail: Refresh token is expired or has been revoked
+            code: AUTH_REFRESH_INVALID
+
+    TokenInvalid:
+      description: Bearer access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/AUTH_TOKEN_INVALID
+            title: Unauthorized
+            status: 401
+            detail: Access token is missing or invalid
+            code: AUTH_TOKEN_INVALID
+
+    RateLimited:
+      description: Too many requests from this IP
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: https://api.example.com/errors/RATE_LIMITED
+            title: Too many requests
+            status: 429
+            detail: Too many requests. Please try again later.
+            code: RATE_LIMITED
