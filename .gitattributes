@@ -1,0 +1,11 @@
+# Enforce LF line endings in the repository for all text files.
+# Developers on Windows will get CRLF in their working copy (via core.autocrlf)
+# but the repo always stores LF -- no cross-platform diffs.
+* text=auto eol=lf
+
+# Binary files -- never touch line endings
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.woff binary

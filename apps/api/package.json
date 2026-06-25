@@ -1,0 +1,31 @@
+{
+  "name": "@noteapp/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --watch dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "6.9.0",
+    "bcrypt": "5.1.1",
+    "dotenv": "16.5.0",
+    "express": "5.1.0",
+    "express-rate-limit": "7.5.0",
+    "jsonwebtoken": "9.0.2",
+    "zod": "3.25.56"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "5.0.2",
+    "@types/express": "5.0.3",
+    "@types/jsonwebtoken": "9.0.9",
+    "@types/node": "22.15.30",
+    "@types/supertest": "6.0.3",
+    "@vitest/coverage-v8": "4.1.9",
+    "prisma": "6.9.0",
+    "supertest": "7.1.0",
+    "vitest": "4.1.9"
+  }
+}
