@@ -180,6 +180,43 @@ describe('WIRING-S9: FR-AUTH-2 login rate limit 5/min', () => {
 });
 
 // ---------------------------------------------------------------------------
+// WIRING-S10..S12: forgot-password + reset-password routes reachable
+// ---------------------------------------------------------------------------
+
+describe('WIRING-S10: POST /auth/forgot-password reachable', () => {
+  it('WIRING-S10: POST /auth/forgot-password with valid email returns 200, not 404', async () => {
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'wiring-test@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+});
+
+describe('WIRING-S11: POST /auth/reset-password reachable', () => {
+  it('WIRING-S11: POST /auth/reset-password with empty body returns 400 VALIDATION_FAILED, not 404', async () => {
+    const res = await request(app)
+      .post('/auth/reset-password')
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('WIRING-S12: FR-AUTH-5 forgot-password rate limit 3/hour per email', () => {
+  it('WIRING-S12: 4th POST /auth/forgot-password for same email in same window returns 429 RATE_LIMITED', async () => {
+    const isolated = buildIsolatedApp();
+    const email = `rl-forgot-${Date.now()}@example.com`;
+    for (let i = 1; i <= 3; i++) {
+      await request(isolated).post('/auth/forgot-password').send({ email });
+    }
+    const res = await request(isolated).post('/auth/forgot-password').send({ email });
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe('RATE_LIMITED');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // errorHandler fallback: non-AppError → 500 INTERNAL_ERROR
 // ---------------------------------------------------------------------------
 

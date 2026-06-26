@@ -5,6 +5,8 @@ import { registerHandler } from './register.js';
 import { loginHandler } from './login.js';
 import { refreshHandler } from './refresh.js';
 import { logoutHandler } from './logout.js';
+import { forgotPasswordHandler } from './forgot-password.js';
+import { resetPasswordHandler } from './reset-password.js';
 import { requireAuth } from '../../middleware/auth.js';
 
 const RFC7807_RATE_LIMITED = {
@@ -40,6 +42,19 @@ export function createAuthRouter(opts?: { storeFactory?: () => Store }): Router 
     },
   });
 
+  const forgotPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 3,
+    keyGenerator: (req: Request) =>
+      (req.body?.email as string | undefined) ?? req.ip ?? 'unknown',
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store: opts?.storeFactory?.(),
+    handler: (_req: Request, res: Response) => {
+      res.status(429).json(RFC7807_RATE_LIMITED);
+    },
+  });
+
   router.post('/register', registerLimiter, (req, res, next) => {
     registerHandler(req, res).catch(next);
   });
@@ -54,6 +69,14 @@ export function createAuthRouter(opts?: { storeFactory?: () => Store }): Router 
 
   router.post('/logout', requireAuth, (req, res, next) => {
     logoutHandler(req, res).catch(next);
+  });
+
+  router.post('/forgot-password', forgotPasswordLimiter, (req, res, next) => {
+    forgotPasswordHandler(req, res).catch(next);
+  });
+
+  router.post('/reset-password', (req, res, next) => {
+    resetPasswordHandler(req, res).catch(next);
   });
 
   return router;
