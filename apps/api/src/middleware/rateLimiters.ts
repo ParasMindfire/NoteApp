@@ -50,3 +50,21 @@ export function createForgotPasswordLimiter(storeFactory?: () => Store) {
     handler: rateLimitHandler,
   });
 }
+
+function publicShareKeyGenerator(req: Request): string {
+  const ip = req.ip ?? 'unknown';
+  const token = (req.params['token'] as string | undefined) ?? 'unknown';
+  return `${ip}:${token}`;
+}
+
+export function createPublicShareLimiter(storeFactory?: () => Store) {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    keyGenerator: publicShareKeyGenerator,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store: storeFactory?.(),
+    handler: rateLimitHandler,
+  });
+}

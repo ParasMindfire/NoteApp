@@ -23,6 +23,8 @@ const CODE_TITLES: Record<string, string> = {
   INVALID_TAG: 'Invalid tag',
   TAG_NOT_FOUND: 'Tag not found',
   TAG_NAME_DUPLICATE: 'Tag name already exists',
+  SHARE_NOT_FOUND: 'Share not found',
+  GONE_LINK_INVALID: 'Gone',
 };
 
 export function errorHandler(
