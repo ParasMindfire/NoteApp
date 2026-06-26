@@ -22,6 +22,7 @@ import {
   resetPasswordSchema,
   createNoteSchema,
   updateNoteSchema,
+  searchQuerySchema,
 } from '@noteapp/shared';
 
 // ---------------------------------------------------------------------------
@@ -349,5 +350,28 @@ describe('SCHEMA-NOTE-2: updateNoteSchema validation rules (FR-NOTE-3)', () => {
 
   it('SCHEMA-NOTE-2: title exceeding 200 chars → fails', () => {
     fails(updateNoteSchema, { title: 'a'.repeat(201) });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchQuerySchema — FR-SEARCH-1
+// FRS / spec.md: q non-empty string (min 1); cursor optional; limit 1-50 default 20
+// Scenarios: SEARCH-S3 (empty q → 400), SEARCH-PAGE-S1/S2 (limit validation)
+// ---------------------------------------------------------------------------
+
+describe('searchQuerySchema validation rules (FR-SEARCH-1)', () => {
+  it('searchQuerySchema rejects empty q', () => {
+    fails(searchQuerySchema, { q: '' });
+  });
+
+  it('searchQuerySchema accepts valid q with default limit 20', () => {
+    const data = succeeds(searchQuerySchema, { q: 'typescript' });
+    expect(data.q).toBe('typescript');
+    expect(data.limit).toBe(20);
+    expect(data.cursor).toBeUndefined();
+  });
+
+  it('searchQuerySchema rejects limit greater than 50', () => {
+    fails(searchQuerySchema, { q: 'test', limit: 51 });
   });
 });

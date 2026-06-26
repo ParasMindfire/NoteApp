@@ -48,6 +48,7 @@ model Note {
   userId    String
   title     String    @db.VarChar(200)
   body      Json
+  bodyText  String    @default("") @db.Text
   version   Int       @default(1)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

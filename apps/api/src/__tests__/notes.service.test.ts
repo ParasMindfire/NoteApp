@@ -354,3 +354,80 @@ describe('NOTE-DELETE-S2: getNoteById after deleteNote returns 404 NOTE_NOT_FOUN
     } satisfies Partial<AppError>);
   });
 });
+
+// ---------------------------------------------------------------------------
+// bodyText middleware: Prisma $extends hook populates bodyText from TipTap JSON
+// FR-SEARCH-1: bodyText is plain-text extraction of TipTap JSON, populated
+// by a Prisma middleware on note save
+// ---------------------------------------------------------------------------
+
+describe('bodyText middleware', () => {
+  it('populates bodyText from body JSON on note create', async () => {
+    const richBody = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'quarterly review' }],
+        },
+      ],
+    };
+
+    const created = await prisma.note.create({
+      data: {
+        userId: ownerId,
+        title: 'Search Test Note',
+        body: richBody,
+      },
+    });
+
+    const row = await prisma.note.findFirst({
+      where: { id: created.id },
+      select: { bodyText: true },
+    });
+
+    expect(row).not.toBeNull();
+    expect(row!.bodyText).toBe('quarterly review');
+  });
+
+  it('updates bodyText when note body is updated (FR-SEARCH-1)', async () => {
+    // Create with initial body
+    const created = await prisma.note.create({
+      data: {
+        userId: ownerId,
+        title: 'Update Body Test',
+        body: {
+          type: 'doc',
+          content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'original text' }] },
+          ],
+        },
+      },
+    });
+
+    const before = await prisma.note.findFirst({
+      where: { id: created.id },
+      select: { bodyText: true },
+    });
+    expect(before!.bodyText).toBe('original text');
+
+    // Update with new body
+    await prisma.note.update({
+      where: { id: created.id },
+      data: {
+        body: {
+          type: 'doc',
+          content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'updated text after edit' }] },
+          ],
+        },
+      },
+    });
+
+    const after = await prisma.note.findFirst({
+      where: { id: created.id },
+      select: { bodyText: true },
+    });
+    expect(after!.bodyText).toBe('updated text after edit');
+  });
+});
