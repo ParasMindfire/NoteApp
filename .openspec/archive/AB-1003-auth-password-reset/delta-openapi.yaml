@@ -1,0 +1,162 @@
+openapi: "3.1.0"
+info:
+  title: NoteApp Auth Delta
+  version: AB-1003
+  description: |
+    Endpoints introduced by AB-1003: Forgot Password (OTP request) and Reset Password (OTP verify).
+    No actual email is sent — OTP is logged to console with [OTP] prefix.
+
+paths:
+  /auth/forgot-password:
+    post:
+      summary: Request a password reset OTP
+      operationId: authForgotPassword
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: >
+            Always returned for valid email format — even if account does not
+            exist (prevents account enumeration).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+              example:
+                message: "If your account exists, you'll receive an OTP"
+        '400':
+          description: Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                type: https://api.example.com/errors/VALIDATION_FAILED
+                title: Validation Failed
+                status: 400
+                detail: Invalid email format
+                code: VALIDATION_FAILED
+        '429':
+          description: Rate limit exceeded (3/hour per email)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                type: https://api.example.com/errors/RATE_LIMITED
+                title: Too Many Requests
+                status: 429
+                detail: Too many OTP requests for this email. Try again later.
+                code: RATE_LIMITED
+
+  /auth/reset-password:
+    post:
+      summary: Verify OTP and set a new password
+      operationId: authResetPassword
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              email: user@example.com
+              otp: "123456"
+              newPassword: NewPass1
+      responses:
+        '204':
+          description: >
+            Password updated. All existing refresh tokens for this user are
+            revoked. Client must re-login.
+        '400':
+          description: Invalid input shape (missing fields, otp not 6 digits, password too weak)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                type: https://api.example.com/errors/VALIDATION_FAILED
+                title: Validation Failed
+                status: 400
+                detail: otp must be a 6-digit string
+                code: VALIDATION_FAILED
+        '401':
+          description: OTP is wrong, expired, or exhausted (max 5 attempts)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                type: https://api.example.com/errors/AUTH_OTP_INVALID
+                title: Invalid or Expired OTP
+                status: 401
+                detail: OTP is invalid, expired, or has no attempts remaining
+                code: AUTH_OTP_INVALID
+
+components:
+  schemas:
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: user@example.com
+
+    ForgotPasswordResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: "If your account exists, you'll receive an OTP"
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, otp, newPassword]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: user@example.com
+        otp:
+          type: string
+          pattern: '^\d{6}$'
+          description: Exactly 6 decimal digits
+          example: "123456"
+        newPassword:
+          type: string
+          minLength: 8
+          description: Must be at least 8 chars and contain at least 1 digit
+          example: NewPass1
+
+    ErrorResponse:
+      type: object
+      required: [type, title, status, detail, code]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - AUTH_OTP_INVALID
+            - RATE_LIMITED
