@@ -129,6 +129,37 @@
   - 401 AUTH_OTP_INVALID — wrong OTP / expired / out of attempts
 - **Acceptance:** scenarios AUTH-OTP-S1..S5 pass; max 5 attempts enforced; expiry 10min enforced; all sessions invalidated on successful reset
 
+## Backend — Architecture Convention
+
+### FR-ARCH-1: Three-layer backend structure [AB-1004]
+All backend feature endpoints from AB-1004 onwards MUST follow a three-layer structure:
+
+- **routes/**: Express router registration + `.catch(next)` only. No business logic, no Prisma.
+- **controllers/**: Zod validate → call service → `res.json()`. No `@prisma/client` imports.
+- **services/**: Business logic + all DB access via Prisma. No Express types (`Request`/`Response`).
+
+**Target folder layout:**
+```
+apps/api/src/
+  routes/       ← notes.router.ts, tags.router.ts, search.router.ts …
+  controllers/  ← notes.controller.ts, tags.controller.ts, search.controller.ts …
+  services/     ← notes.service.ts, tags.service.ts, search.service.ts …
+  middleware/   ← auth.ts, errorHandler.ts  (unchanged)
+  lib/          ← prisma.ts, jwt.ts, cookie.ts  (unchanged)
+```
+
+**Reviewer [FAIL] triggers:**
+- Service file imports `Request` or `Response` from express
+- Controller file calls `prisma.*` directly or imports `@prisma/client`
+- Route file contains any logic beyond router registration and `.catch(next)` wiring
+
+**Auth routes (AB-1002/1003):** grandfathered in fat-handler pattern under `routes/auth/`. Must be
+retrofitted to the three-layer structure in a dedicated refactor ticket **before AB-1010** (frontend
+auth integration). The refactor creates `services/auth.service.ts` and `controllers/auth.controller.ts`
+and slims `routes/auth/*.ts` to pure wiring.
+
+**Acceptance:** every new endpoint in AB-1004+ passes reviewer cross-layer import check; no business logic in routes/; no Prisma in controllers/.
+
 ## Backend — Notes (AB-1004, AB-1005)
 
 ### FR-NOTE-1: Create note [AB-1004]

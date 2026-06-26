@@ -1,82 +1,49 @@
-import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import { Router } from 'express';
 import type { Store } from 'express-rate-limit';
-import { registerHandler } from './register.js';
-import { loginHandler } from './login.js';
-import { refreshHandler } from './refresh.js';
-import { logoutHandler } from './logout.js';
-import { forgotPasswordHandler } from './forgot-password.js';
-import { resetPasswordHandler } from './reset-password.js';
+import {
+  registerController,
+  loginController,
+  refreshController,
+  logoutController,
+  forgotPasswordController,
+  resetPasswordController,
+} from '../../controllers/auth.controller.js';
 import { requireAuth } from '../../middleware/auth.js';
-
-const RFC7807_RATE_LIMITED = {
-  type: 'https://api.example.com/errors/RATE_LIMITED',
-  title: 'Too many requests',
-  status: 429,
-  detail: 'Too many requests, please try again later',
-  code: 'RATE_LIMITED',
-};
+import {
+  createRegisterLimiter,
+  createLoginLimiter,
+  createForgotPasswordLimiter,
+} from '../../middleware/rateLimiters.js';
 
 export function createAuthRouter(opts?: { storeFactory?: () => Store }): Router {
   const router = Router();
 
-  const registerLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    limit: 3,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    store: opts?.storeFactory?.(),
-    handler: (_req: Request, res: Response) => {
-      res.status(429).json(RFC7807_RATE_LIMITED);
-    },
-  });
-
-  const loginLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    store: opts?.storeFactory?.(),
-    handler: (_req: Request, res: Response) => {
-      res.status(429).json(RFC7807_RATE_LIMITED);
-    },
-  });
-
-  const forgotPasswordLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    limit: 3,
-    keyGenerator: (req: Request) =>
-      (req.body?.email as string | undefined) ?? req.ip ?? 'unknown',
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    store: opts?.storeFactory?.(),
-    handler: (_req: Request, res: Response) => {
-      res.status(429).json(RFC7807_RATE_LIMITED);
-    },
-  });
+  const registerLimiter = createRegisterLimiter(opts?.storeFactory);
+  const loginLimiter = createLoginLimiter(opts?.storeFactory);
+  const forgotPasswordLimiter = createForgotPasswordLimiter(opts?.storeFactory);
 
   router.post('/register', registerLimiter, (req, res, next) => {
-    registerHandler(req, res).catch(next);
+    registerController(req, res).catch(next);
   });
 
   router.post('/login', loginLimiter, (req, res, next) => {
-    loginHandler(req, res).catch(next);
+    loginController(req, res).catch(next);
   });
 
   router.post('/refresh', (req, res, next) => {
-    refreshHandler(req, res).catch(next);
+    refreshController(req, res).catch(next);
   });
 
   router.post('/logout', requireAuth, (req, res, next) => {
-    logoutHandler(req, res).catch(next);
+    logoutController(req, res).catch(next);
   });
 
   router.post('/forgot-password', forgotPasswordLimiter, (req, res, next) => {
-    forgotPasswordHandler(req, res).catch(next);
+    forgotPasswordController(req, res).catch(next);
   });
 
   router.post('/reset-password', (req, res, next) => {
-    resetPasswordHandler(req, res).catch(next);
+    resetPasswordController(req, res).catch(next);
   });
 
   return router;

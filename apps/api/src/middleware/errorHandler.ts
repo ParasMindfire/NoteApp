@@ -19,6 +19,8 @@ const CODE_TITLES: Record<string, string> = {
   AUTH_REFRESH_INVALID: 'Refresh token invalid',
   AUTH_OTP_INVALID: 'Invalid or expired OTP',
   RATE_LIMITED: 'Too many requests',
+  NOTE_NOT_FOUND: 'Note not found',
+  INVALID_TAG: 'Invalid tag',
 };
 
 export function errorHandler(

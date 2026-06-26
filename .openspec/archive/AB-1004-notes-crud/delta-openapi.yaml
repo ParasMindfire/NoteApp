@@ -1,0 +1,244 @@
+openapi: "3.1.0"
+info:
+  title: NoteApp API — AB-1004 delta
+  version: "0.4.0"
+  description: |
+    Adds Note CRUD endpoints. Auth endpoints are structurally refactored (three-layer)
+    with zero contract change — no delta needed for those paths.
+
+paths:
+  /notes:
+    post:
+      summary: Create a note
+      tags: [Notes]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteBody"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationFailed"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "422":
+          $ref: "#/components/responses/InvalidTag"
+
+  /notes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get a note by ID
+      tags: [Notes]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "404":
+          $ref: "#/components/responses/NoteNotFound"
+
+    patch:
+      summary: Update a note (creates version snapshot)
+      tags: [Notes]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteBody"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationFailed"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "404":
+          $ref: "#/components/responses/NoteNotFound"
+
+    delete:
+      summary: Soft-delete a note
+      tags: [Notes]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Note soft-deleted
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "404":
+          $ref: "#/components/responses/NoteNotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TipTapDocument:
+      type: object
+      description: TipTap JSON document (ProseMirror format)
+      properties:
+        type:
+          type: string
+          enum: [doc]
+        content:
+          type: array
+          items:
+            type: object
+      required: [type, content]
+      additionalProperties: true
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          description: cuid2
+        title:
+          type: string
+          maxLength: 200
+        body:
+          $ref: "#/components/schemas/TipTapDocument"
+        tagIds:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, body, tagIds, version, createdAt, updatedAt]
+
+    CreateNoteBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          $ref: "#/components/schemas/TipTapDocument"
+        tagIds:
+          type: array
+          items:
+            type: string
+          default: []
+      required: [title, body]
+
+    UpdateNoteBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          $ref: "#/components/schemas/TipTapDocument"
+        tagIds:
+          type: array
+          items:
+            type: string
+      minProperties: 1
+
+    ErrorBody:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+      required: [type, title, status, code]
+
+  responses:
+    ValidationFailed:
+      description: Bad request — validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/VALIDATION_FAILED"
+            title: "Validation Failed"
+            status: 400
+            detail: "title must be at least 1 character"
+            code: "VALIDATION_FAILED"
+
+    TokenInvalid:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/AUTH_TOKEN_INVALID"
+            title: "Unauthorized"
+            status: 401
+            detail: "Access token is missing or expired"
+            code: "AUTH_TOKEN_INVALID"
+
+    NoteNotFound:
+      description: Note not found (or belongs to another user, or soft-deleted)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/NOTE_NOT_FOUND"
+            title: "Not Found"
+            status: 404
+            detail: "Note not found"
+            code: "NOTE_NOT_FOUND"
+
+    InvalidTag:
+      description: One or more tagIds not owned by the current user
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/INVALID_TAG"
+            title: "Unprocessable Entity"
+            status: 422
+            detail: "One or more tag IDs do not belong to the current user"
+            code: "INVALID_TAG"

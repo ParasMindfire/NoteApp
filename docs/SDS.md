@@ -28,5 +28,11 @@
 
 ## Data Conventions
 - Timestamps: ISO 8601 UTC
-- IDs: cuid2
+- IDs: cuid
 - Soft delete: deletedAt timestamp
+
+## Backend Layer Convention (AB-1004+)
+Three layers enforced from AB-1004 onwards (auth routes grandfathered — refactor ticket pending before AB-1010):
+- **routes/**: Express wiring only — register router, `.catch(next)`. No logic, no Prisma.
+- **controllers/**: Zod validate → call service → `res.json()`. No `@prisma/client` imports.
+- **services/**: Business logic + all Prisma calls. No Express types (`Request`/`Response`).
