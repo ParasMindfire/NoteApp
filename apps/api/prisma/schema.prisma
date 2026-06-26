@@ -56,6 +56,9 @@ model Note {
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags     NoteTag[]
   versions NoteVersion[]
+
+  @@index([userId, createdAt, id])
+  @@index([userId, updatedAt, id])
 }
 
 model NoteVersion {

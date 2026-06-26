@@ -5,6 +5,7 @@ import {
   getNoteController,
   updateNoteController,
   deleteNoteController,
+  listNotesController,
 } from '../controllers/notes.controller.js';
 
 const router = Router();
@@ -13,6 +14,10 @@ router.use(requireAuth);
 
 router.post('/', (req, res, next) => {
   createNoteController(req, res).catch(next);
+});
+
+router.get('/', (req, res, next) => {
+  listNotesController(req, res).catch(next);
 });
 
 router.get('/:id', (req, res, next) => {
