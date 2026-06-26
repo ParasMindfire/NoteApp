@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express';
-import { createNoteSchema, updateNoteSchema } from '@noteapp/shared';
+import { createNoteSchema, updateNoteSchema, listNotesQuerySchema } from '@noteapp/shared';
 import { AppError } from '../middleware/errorHandler.js';
 import {
   createNote,
   getNoteById,
   updateNote,
   deleteNote,
+  listNotes,
 } from '../services/notes.service.js';
 
 export async function createNoteController(req: Request, res: Response): Promise<void> {
@@ -43,4 +44,28 @@ export async function deleteNoteController(req: Request, res: Response): Promise
   const noteId = req.params['id'] as string;
   await deleteNote(userId, noteId);
   res.status(204).end();
+}
+
+export async function listNotesController(req: Request, res: Response): Promise<void> {
+  const userId = res.locals['userId'] as string;
+
+  const result = listNotesQuerySchema.safeParse(req.query);
+  if (!result.success) {
+    const detail = result.error.issues[0]?.message ?? 'Invalid query parameters';
+    throw new AppError(400, 'VALIDATION_FAILED', detail);
+  }
+
+  const { cursor, limit, sort, tagIds: rawTagIds } = result.data;
+
+  const [sortField, sortDir] = sort.split(':') as ['createdAt' | 'updatedAt', 'asc' | 'desc'];
+
+  const tagIds = rawTagIds
+    ? rawTagIds
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  const paginated = await listNotes(userId, { cursor, limit, sortField, sortDir, tagIds });
+  res.status(200).json(paginated);
 }

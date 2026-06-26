@@ -48,3 +48,23 @@ export const updateNoteSchema = createNoteSchema
 
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
+export const listNotesQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, 'limit must be at least 1')
+    .max(50, 'limit must be at most 50')
+    .default(20),
+  sort: z
+    .string()
+    .regex(
+      /^(createdAt|updatedAt):(asc|desc)$/,
+      'sort must be one of: createdAt:asc, createdAt:desc, updatedAt:asc, updatedAt:desc',
+    )
+    .default('createdAt:desc'),
+  tagIds: z.string().optional(),
+});
+
+export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;

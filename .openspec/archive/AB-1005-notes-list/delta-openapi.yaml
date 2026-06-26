@@ -1,0 +1,195 @@
+openapi: "3.1.0"
+info:
+  title: NoteApp API — AB-1005 delta
+  version: "0.5.0"
+  description: |
+    Adds GET /notes with cursor-based pagination, multi-field sort, and AND-semantic
+    tag filter. POST /notes (AB-1004) is unchanged and not repeated here.
+
+paths:
+  /notes:
+    get:
+      summary: List own notes (paginated)
+      tags: [Notes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Opaque pagination cursor from a previous response's `nextCursor` field.
+            Encoded as base64url(JSON.stringify({ lastId, lastValue })).
+            Returns 400 VALIDATION_FAILED if malformed.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Number of results per page (1–50). Returns 400 if > 50 or ≤ 0.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: "^(createdAt|updatedAt):(asc|desc)$"
+            default: "createdAt:desc"
+          description: >
+            Sort field and direction. Accepted values: createdAt:asc, createdAt:desc,
+            updatedAt:asc, updatedAt:desc. Returns 400 if the pattern does not match.
+        - name: tagIds
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Comma-separated list of tag IDs. Note must possess ALL listed tags (AND semantics).
+            Example: ?tagIds=clx1,clx2. Returns 422 INVALID_TAG if any tagId is not owned
+            by the current user. An empty value is treated as no filter.
+      responses:
+        "200":
+          description: Paginated list of notes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedNotes"
+              example:
+                items:
+                  - id: "clx1abc"
+                    title: "My Note"
+                    body:
+                      type: "doc"
+                      content: []
+                    tagIds: ["clxtag1"]
+                    version: 2
+                    createdAt: "2025-01-01T12:00:00.000Z"
+                    updatedAt: "2025-01-02T09:00:00.000Z"
+                nextCursor: "eyJsYXN0SWQiOiJjbHgxYWJjIiwibGFzdFZhbHVlIjoiMjAyNS0wMS0wMVQxMjowMDowMC4wMDBaIn0"
+        "400":
+          $ref: "#/components/responses/ValidationFailed"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "422":
+          $ref: "#/components/responses/InvalidTag"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TipTapDocument:
+      type: object
+      description: TipTap JSON document (ProseMirror format)
+      properties:
+        type:
+          type: string
+          enum: [doc]
+        content:
+          type: array
+          items:
+            type: object
+      required: [type, content]
+      additionalProperties: true
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          description: cuid
+        title:
+          type: string
+          maxLength: 200
+        body:
+          $ref: "#/components/schemas/TipTapDocument"
+        tagIds:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, body, tagIds, version, createdAt, updatedAt]
+
+    PaginatedNotes:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Note"
+        nextCursor:
+          type: string
+          nullable: true
+          description: >
+            Opaque cursor for the next page. null when no further results exist.
+      required: [items, nextCursor]
+
+    ErrorBody:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+      required: [type, title, status, code]
+
+  responses:
+    ValidationFailed:
+      description: Bad request — validation failed (limit out of range, invalid cursor, invalid sort)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/VALIDATION_FAILED"
+            title: "Validation Failed"
+            status: 400
+            detail: "limit must be at most 50"
+            code: "VALIDATION_FAILED"
+
+    TokenInvalid:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/AUTH_TOKEN_INVALID"
+            title: "Unauthorized"
+            status: 401
+            detail: "Access token is missing or expired"
+            code: "AUTH_TOKEN_INVALID"
+
+    InvalidTag:
+      description: One or more tagIds not owned by the current user
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/INVALID_TAG"
+            title: "Unprocessable Entity"
+            status: 422
+            detail: "One or more tag IDs do not belong to the current user"
+            code: "INVALID_TAG"
