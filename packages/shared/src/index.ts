@@ -81,3 +81,10 @@ export const updateTagSchema = z.object({
 
 export type CreateTagInput = z.infer<typeof createTagSchema>;
 export type UpdateTagInput = z.infer<typeof updateTagSchema>;
+
+export const searchQuerySchema = z.object({
+  q: z.string().min(1, 'q must be a non-empty string'),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+export type SearchQuery = z.infer<typeof searchQuerySchema>;
