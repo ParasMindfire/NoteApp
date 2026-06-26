@@ -15,6 +15,8 @@ model User {
   updatedAt         DateTime           @updatedAt
   refreshTokens     RefreshToken[]
   passwordResetOtps PasswordResetOtp[]
+  notes             Note[]
+  tags              Tag[]
 }
 
 model RefreshToken {
@@ -39,4 +41,54 @@ model PasswordResetOtp {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Note {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String    @db.VarChar(200)
+  body      Json
+  version   Int       @default(1)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags     NoteTag[]
+  versions NoteVersion[]
+}
+
+model NoteVersion {
+  id      String   @id @default(cuid())
+  noteId  String
+  version Int
+  title   String   @db.VarChar(200)
+  body    Json
+  savedAt DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String    @db.VarChar(50)
+  color     String    @db.VarChar(7)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes NoteTag[]
+
+  @@unique([userId, name])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
 }

@@ -28,7 +28,7 @@
 
 ## Data Conventions
 - Timestamps: ISO 8601 UTC
-- IDs: cuid2
+- IDs: cuid
 - Soft delete: deletedAt timestamp
 
 ## Backend Layer Convention (AB-1004+)
