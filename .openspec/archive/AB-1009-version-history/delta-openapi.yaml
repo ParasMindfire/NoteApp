@@ -1,0 +1,295 @@
+openapi: "3.1.0"
+info:
+  title: Note App API — AB-1009 delta
+  version: "0.9.0"
+  description: >
+    New endpoints for note version history. Adds authenticated list, view,
+    and restore operations on NoteVersion records. No new Prisma model —
+    NoteVersion was introduced in AB-1004.
+
+paths:
+  /notes/{id}/versions:
+    get:
+      summary: List all versions for a note (newest first, title only)
+      operationId: listVersions
+      tags: [Versions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+      responses:
+        '200':
+          description: All NoteVersion records ordered version DESC
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VersionListItem'
+              example:
+                - id: "clxabc"
+                  version: 3
+                  savedAt: "2026-06-26T12:00:00.000Z"
+                  title: "Meeting notes v3"
+                - id: "clxdef"
+                  version: 2
+                  savedAt: "2026-06-26T10:00:00.000Z"
+                  title: "Meeting notes v2"
+                - id: "clxghi"
+                  version: 1
+                  savedAt: "2026-06-26T08:00:00.000Z"
+                  title: "Meeting notes"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+
+  /notes/{id}/versions/{versionId}:
+    get:
+      summary: View a specific version in full (includes body)
+      operationId: getVersion
+      tags: [Versions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: NoteVersion cuid
+      responses:
+        '200':
+          description: Full version snapshot including TipTap body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionDetail'
+              example:
+                id: "clxabc"
+                version: 3
+                savedAt: "2026-06-26T12:00:00.000Z"
+                title: "Meeting notes v3"
+                body:
+                  type: "doc"
+                  content: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Note not found / not owned, or versionId not found on this note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noteNotFound:
+                  summary: Note doesn't exist or not owned by requester
+                  value:
+                    type: "https://api.example.com/errors/NOTE_NOT_FOUND"
+                    title: "Not Found"
+                    status: 404
+                    detail: "Note not found"
+                    code: "NOTE_NOT_FOUND"
+                versionNotFound:
+                  summary: Version doesn't exist or belongs to a different note
+                  value:
+                    type: "https://api.example.com/errors/VERSION_NOT_FOUND"
+                    title: "Not Found"
+                    status: 404
+                    detail: "Version not found"
+                    code: "VERSION_NOT_FOUND"
+
+  /notes/{id}/versions/{versionId}/restore:
+    post:
+      summary: >
+        Restore note to a previous version (non-destructive — creates 2 new
+        NoteVersion records and increments note.version by 1)
+      operationId: restoreVersion
+      tags: [Versions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: NoteVersion cuid to restore from
+      requestBody:
+        required: false
+        description: No request body needed
+      responses:
+        '200':
+          description: >
+            Note updated to selected version's title and body. Returns the full
+            updated note (same shape as PATCH /notes/:id). version is incremented
+            by 1. Two new NoteVersion records are created inside the transaction
+            (pre-restore snapshot + post-restore record).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+              example:
+                id: "clxnote"
+                title: "Meeting notes"
+                body:
+                  type: "doc"
+                  content: []
+                tagIds: []
+                createdAt: "2026-06-26T07:00:00.000Z"
+                updatedAt: "2026-06-26T13:00:00.000Z"
+                version: 4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Note not found / not owned, or versionId not found on this note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noteNotFound:
+                  summary: Note doesn't exist or not owned by requester
+                  value:
+                    type: "https://api.example.com/errors/NOTE_NOT_FOUND"
+                    title: "Not Found"
+                    status: 404
+                    detail: "Note not found"
+                    code: "NOTE_NOT_FOUND"
+                versionNotFound:
+                  summary: Version doesn't exist or belongs to a different note
+                  value:
+                    type: "https://api.example.com/errors/VERSION_NOT_FOUND"
+                    title: "Not Found"
+                    status: 404
+                    detail: "Version not found"
+                    code: "VERSION_NOT_FOUND"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    VersionListItem:
+      type: object
+      required: [id, version, savedAt, title]
+      properties:
+        id:
+          type: string
+          description: NoteVersion cuid
+        version:
+          type: integer
+          description: Monotonic version number (matches note.version at time of snapshot)
+        savedAt:
+          type: string
+          format: date-time
+          description: When this snapshot was created
+        title:
+          type: string
+          description: Note title at time of snapshot (body omitted in list view)
+
+    VersionDetail:
+      type: object
+      required: [id, version, savedAt, title, body]
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+        savedAt:
+          type: string
+          format: date-time
+        title:
+          type: string
+        body:
+          type: object
+          description: TipTap JSON document at time of snapshot
+
+    NoteResponse:
+      type: object
+      required: [id, title, body, tagIds, createdAt, updatedAt, version]
+      description: Full note — same shape returned by POST /notes and PATCH /notes/:id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: object
+          description: TipTap JSON document
+        tagIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          description: Current version number after restore (incremented by 1)
+
+    Error:
+      type: object
+      required: [type, title, status, detail, code]
+      description: RFC 7807 error body
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/AUTH_TOKEN_INVALID"
+            title: "Unauthorized"
+            status: 401
+            detail: "Access token is missing or invalid"
+            code: "AUTH_TOKEN_INVALID"
+
+    NoteNotFound:
+      description: Note not found or not owned by the requester
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/NOTE_NOT_FOUND"
+            title: "Not Found"
+            status: 404
+            detail: "Note not found"
+            code: "NOTE_NOT_FOUND"
