@@ -68,3 +68,16 @@ export const listNotesQuerySchema = z.object({
 });
 
 export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;
+
+export const createTagSchema = z.object({
+  name: z.string().min(1, 'name is required').max(50, 'name must be at most 50 characters'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be a valid hex color (#RRGGBB)'),
+});
+
+export const updateTagSchema = z.object({
+  name: z.string().min(1, 'name is required').max(50, 'name must be at most 50 characters').optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be a valid hex color (#RRGGBB)').optional(),
+});
+
+export type CreateTagInput = z.infer<typeof createTagSchema>;
+export type UpdateTagInput = z.infer<typeof updateTagSchema>;

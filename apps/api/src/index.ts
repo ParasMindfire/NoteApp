@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import 'dotenv/config';
 import { authRouter } from './routes/auth/index.js';
 import notesRouter from './routes/notes.js';
+import tagsRouter from './routes/tags.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -16,6 +17,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/notes', notesRouter);
+app.use('/tags', tagsRouter);
 
 app.use(errorHandler);
 
