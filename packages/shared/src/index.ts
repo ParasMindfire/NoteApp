@@ -88,3 +88,15 @@ export const searchQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
+
+export const createShareSchema = z.object({
+  expiresAt: z
+    .string()
+    .datetime({ message: 'expiresAt must be a valid ISO 8601 datetime' })
+    .refine((v) => new Date(v) > new Date(), {
+      message: 'expiresAt must be a future datetime',
+    })
+    .nullable()
+    .optional(),
+});
+export type CreateShareInput = z.infer<typeof createShareSchema>;

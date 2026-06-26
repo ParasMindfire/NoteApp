@@ -1,0 +1,322 @@
+openapi: "3.1.0"
+info:
+  title: Note App API — AB-1008 delta
+  version: "0.8.0"
+  description: >
+    New endpoints for note sharing. Adds authenticated share management
+    (create, list, revoke) and a public read-only view endpoint.
+
+paths:
+  /notes/{id}/shares:
+    post:
+      summary: Generate a public read-only share link
+      operationId: createShare
+      tags: [Sharing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareRequest'
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+              example:
+                token: "dGhpcyBpcyBhIHRlc3Rz"
+                shareUrl: "http://localhost:3000/public/shares/dGhpcyBpcyBhIHRlc3Rz"
+                expiresAt: null
+                viewCount: 0
+        '400':
+          description: Validation failed — expiresAt is in the past or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                type: "https://api.example.com/errors/VALIDATION_FAILED"
+                title: "Validation failed"
+                status: 400
+                detail: "expiresAt must be a future datetime"
+                code: "VALIDATION_FAILED"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+
+    get:
+      summary: List all share links for a note (active and revoked)
+      operationId: listShares
+      tags: [Sharing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+      responses:
+        '200':
+          description: All shares ordered createdAt DESC
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShareListItem'
+              example:
+                - id: "clxabc"
+                  token: "dGhpcyBpcyBhIHRlc3Rz"
+                  shareUrl: "http://localhost:3000/public/shares/dGhpcyBpcyBhIHRlc3Rz"
+                  expiresAt: null
+                  revokedAt: null
+                  viewCount: 42
+                  createdAt: "2026-06-26T10:00:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+
+  /notes/{id}/shares/{token}:
+    delete:
+      summary: Revoke a share link (idempotent)
+      operationId: revokeShare
+      tags: [Sharing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Note cuid
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 32-char URL-safe share token
+      responses:
+        '204':
+          description: Revoked successfully (or already revoked — idempotent)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Share token not found or belongs to another user's note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                type: "https://api.example.com/errors/SHARE_NOT_FOUND"
+                title: "Not Found"
+                status: 404
+                detail: "Share link not found"
+                code: "SHARE_NOT_FOUND"
+
+  /public/shares/{token}:
+    get:
+      summary: View a shared note — public, no authentication required
+      operationId: viewPublicShare
+      tags: [Sharing]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 32-char URL-safe share token
+      responses:
+        '200':
+          description: >
+            Shared note content. viewCount is incremented atomically before
+            the response is returned; the value in the response reflects the
+            increment from this request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicShareResponse'
+              example:
+                title: "Meeting Notes"
+                body:
+                  type: "doc"
+                  content: []
+                viewCount: 7
+                sharedAt: "2026-06-26T10:00:00.000Z"
+        '410':
+          description: Share link is revoked or expired (cause not distinguished)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                type: "https://api.example.com/errors/GONE_LINK_INVALID"
+                title: "Gone"
+                status: 410
+                detail: "This share link has expired or been revoked"
+                code: "GONE_LINK_INVALID"
+        '429':
+          description: Rate limit exceeded — 60 requests/min per IP per token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                type: "https://api.example.com/errors/RATE_LIMITED"
+                title: "Too Many Requests"
+                status: 429
+                detail: "Rate limit exceeded. Try again later."
+                code: "RATE_LIMITED"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateShareRequest:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Optional expiry in ISO 8601 UTC. Must be a future datetime.
+            Omit or send null for a non-expiring link.
+          example: "2026-12-31T23:59:59.000Z"
+
+    ShareResponse:
+      type: object
+      required: [token, shareUrl, viewCount]
+      properties:
+        token:
+          type: string
+          description: 32-char URL-safe token (base64url, no padding)
+          example: "dGhpcyBpcyBhIHRlc3Rz"
+        shareUrl:
+          type: string
+          description: Full URL for sharing with others
+          example: "http://localhost:3000/public/shares/dGhpcyBpcyBhIHRlc3Rz"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Expiry datetime or null if non-expiring
+        viewCount:
+          type: integer
+          description: Always 0 at creation time
+          example: 0
+
+    ShareListItem:
+      type: object
+      required: [id, token, shareUrl, viewCount, createdAt]
+      properties:
+        id:
+          type: string
+          description: NoteShare cuid
+        token:
+          type: string
+          description: 32-char URL-safe token
+        shareUrl:
+          type: string
+          description: Full URL for sharing with others
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when share was revoked; null if still active
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    PublicShareResponse:
+      type: object
+      required: [title, body, viewCount, sharedAt]
+      properties:
+        title:
+          type: string
+          description: Note title (read-only view; no user metadata exposed)
+        body:
+          type: object
+          description: TipTap JSON document
+        viewCount:
+          type: integer
+          description: >
+            Total views including this request. Incremented atomically
+            before the response is returned.
+        sharedAt:
+          type: string
+          format: date-time
+          description: When the share link was originally created (NoteShare.createdAt)
+
+    Error:
+      type: object
+      required: [type, title, status, detail, code]
+      description: RFC 7807 error body
+      properties:
+        type:
+          type: string
+          description: Error type URI
+        title:
+          type: string
+          description: Human-readable error title
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Specific error message
+        code:
+          type: string
+          description: Machine-readable error code
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/AUTH_TOKEN_INVALID"
+            title: "Unauthorized"
+            status: 401
+            detail: "Access token is missing or invalid"
+            code: "AUTH_TOKEN_INVALID"
+
+    NoteNotFound:
+      description: Note not found or not owned by the requester
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/NOTE_NOT_FOUND"
+            title: "Not Found"
+            status: 404
+            detail: "Note not found"
+            code: "NOTE_NOT_FOUND"

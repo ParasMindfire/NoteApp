@@ -5,6 +5,8 @@ import { authRouter } from './routes/auth/index.js';
 import notesRouter from './routes/notes.js';
 import tagsRouter from './routes/tags.js';
 import searchRouter from './routes/search.js';
+import sharesRouter from './routes/shares.js';
+import publicRouter from './routes/public.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -18,8 +20,10 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/notes', notesRouter);
+app.use('/notes', sharesRouter);
 app.use('/tags', tagsRouter);
 app.use('/search', searchRouter);
+app.use('/public', publicRouter);
 
 app.use(errorHandler);
 

@@ -57,9 +57,25 @@ model Note {
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags     NoteTag[]
   versions NoteVersion[]
+  shares   NoteShare[]
 
   @@index([userId, createdAt, id])
   @@index([userId, updatedAt, id])
+}
+
+model NoteShare {
+  id        String    @id @default(cuid())
+  noteId    String
+  token     String    @unique @db.VarChar(32)
+  expiresAt DateTime?
+  revokedAt DateTime?
+  viewCount Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([token])
 }
 
 model NoteVersion {

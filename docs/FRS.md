@@ -334,6 +334,16 @@ and slims `routes/auth/*.ts` to pure wiring.
 - **Distinction:** expired (past expiresAt) and revoked (revokedAt set) both return identical 410 GONE_LINK_INVALID body (don't distinguish causes to client)
 - **Acceptance:** scenarios SHARE-VIEW-S2, S3 pass with identical response shape
 
+### FR-SHARE-5: List share links for a note [AB-1008]
+- **Endpoint:** GET /notes/:id/shares
+- **Auth:** requires access token; must own note
+- **Behavior:** returns all shares (active and revoked) for the note, ordered `createdAt DESC`
+- **Success response:** 200 with `[{ id, token, shareUrl, expiresAt, revokedAt, viewCount, createdAt }]`
+- **Errors:**
+  - 401 AUTH_TOKEN_INVALID
+  - 404 NOTE_NOT_FOUND — note doesn't exist or not owned by requester
+- **Acceptance:** scenarios SHARE-LIST-S1..S2 pass; revoked items included with `revokedAt` set; ordering verified
+
 ## Backend — Version History (AB-1009)
 
 ### FR-VER-1: Save creates snapshot [AB-1009]
