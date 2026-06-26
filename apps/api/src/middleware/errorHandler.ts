@@ -25,6 +25,7 @@ const CODE_TITLES: Record<string, string> = {
   TAG_NAME_DUPLICATE: 'Tag name already exists',
   SHARE_NOT_FOUND: 'Share not found',
   GONE_LINK_INVALID: 'Gone',
+  VERSION_NOT_FOUND: 'Version not found',
 };
 
 export function errorHandler(

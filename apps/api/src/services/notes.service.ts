@@ -13,7 +13,7 @@ export interface NoteResponse {
   updatedAt: Date;
 }
 
-type NoteWithTags = {
+export type NoteWithTags = {
   id: string;
   title: string;
   body: Prisma.JsonValue;
@@ -23,7 +23,7 @@ type NoteWithTags = {
   tags: { tagId: string }[];
 };
 
-function toNoteResponse(note: NoteWithTags): NoteResponse {
+export function toNoteResponse(note: NoteWithTags): NoteResponse {
   return {
     id: note.id,
     title: note.title,
@@ -35,7 +35,7 @@ function toNoteResponse(note: NoteWithTags): NoteResponse {
   };
 }
 
-async function assertNoteOwner(userId: string, noteId: string): Promise<NoteWithTags> {
+export async function assertNoteOwner(userId: string, noteId: string): Promise<NoteWithTags> {
   const note = await prisma.note.findFirst({
     where: { id: noteId, userId, deletedAt: null },
     select: {

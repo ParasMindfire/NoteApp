@@ -87,6 +87,8 @@ model NoteVersion {
   savedAt DateTime @default(now())
 
   note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
 }
 
 model Tag {
