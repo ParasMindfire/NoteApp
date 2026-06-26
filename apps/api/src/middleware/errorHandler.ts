@@ -21,6 +21,8 @@ const CODE_TITLES: Record<string, string> = {
   RATE_LIMITED: 'Too many requests',
   NOTE_NOT_FOUND: 'Note not found',
   INVALID_TAG: 'Invalid tag',
+  TAG_NOT_FOUND: 'Tag not found',
+  TAG_NAME_DUPLICATE: 'Tag name already exists',
 };
 
 export function errorHandler(

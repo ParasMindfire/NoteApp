@@ -1,0 +1,263 @@
+openapi: "3.1.0"
+info:
+  title: NoteApp API — AB-1006 delta (Tags CRUD)
+  version: "1.6.0"
+
+# Only endpoints and schemas introduced or changed by AB-1006.
+# Merge into the base openapi.yaml after this ticket ships.
+
+paths:
+  /tags:
+    post:
+      summary: Create a tag
+      operationId: createTag
+      tags: [Tags]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagCreateBody"
+      responses:
+        "201":
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "400":
+          $ref: "#/components/responses/ValidationFailed"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "409":
+          $ref: "#/components/responses/TagNameDuplicate"
+
+    get:
+      summary: List own tags with note counts
+      operationId: listTags
+      tags: [Tags]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Tag list (only non-deleted tags; noteCount excludes soft-deleted notes)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TagListItem"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+
+  /tags/{id}:
+    patch:
+      summary: Update a tag's name and/or color
+      operationId: updateTag
+      tags: [Tags]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TagId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagUpdateBody"
+      responses:
+        "200":
+          description: Tag updated (or unchanged if body was empty)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "400":
+          $ref: "#/components/responses/ValidationFailed"
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "404":
+          $ref: "#/components/responses/TagNotFound"
+        "409":
+          $ref: "#/components/responses/TagNameDuplicate"
+
+    delete:
+      summary: Soft-delete a tag
+      operationId: deleteTag
+      tags: [Tags]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204":
+          description: Tag soft-deleted (deletedAt set); no content returned
+        "401":
+          $ref: "#/components/responses/TokenInvalid"
+        "404":
+          $ref: "#/components/responses/TagNotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TagId:
+      name: id
+      in: path
+      required: true
+      description: cuid of the tag
+      schema:
+        type: string
+
+  schemas:
+    TagCreateBody:
+      type: object
+      required: [name, color]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: Work
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          example: "#FF5733"
+
+    TagUpdateBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: Personal
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          example: "#3399FF"
+      description: Both fields optional. Empty body is a valid no-op.
+
+    Tag:
+      type: object
+      required: [id, name, color, createdAt]
+      properties:
+        id:
+          type: string
+          description: cuid
+          example: clxyz1234567890abcdef
+        name:
+          type: string
+          maxLength: 50
+          example: Work
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          example: "#FF5733"
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 UTC
+          example: "2026-06-26T10:00:00.000Z"
+
+    TagListItem:
+      type: object
+      required: [id, name, color, noteCount]
+      properties:
+        id:
+          type: string
+          description: cuid
+          example: clxyz1234567890abcdef
+        name:
+          type: string
+          maxLength: 50
+          example: Work
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          example: "#FF5733"
+        noteCount:
+          type: integer
+          minimum: 0
+          description: Count of non-deleted notes that include this tag
+          example: 5
+
+    ErrorBody:
+      type: object
+      required: [type, title, status, detail, code]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://api.example.com/errors/TAG_NOT_FOUND"
+        title:
+          type: string
+          example: Tag not found
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: "No tag with that ID exists for this user."
+        code:
+          type: string
+          example: TAG_NOT_FOUND
+
+  responses:
+    ValidationFailed:
+      description: Request body or params failed Zod validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/VALIDATION_FAILED"
+            title: Validation failed
+            status: 400
+            detail: "color must match ^#[0-9a-fA-F]{6}$"
+            code: VALIDATION_FAILED
+
+    TokenInvalid:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/AUTH_TOKEN_INVALID"
+            title: Unauthorized
+            status: 401
+            detail: Access token is missing or expired.
+            code: AUTH_TOKEN_INVALID
+
+    TagNotFound:
+      description: Tag not found or belongs to another user (never 403)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/TAG_NOT_FOUND"
+            title: Tag not found
+            status: 404
+            detail: "No tag with that ID exists for this user."
+            code: TAG_NOT_FOUND
+
+    TagNameDuplicate:
+      description: A tag with this name already exists for the current user
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            type: "https://api.example.com/errors/TAG_NAME_DUPLICATE"
+            title: Tag name already exists
+            status: 409
+            detail: "You already have a tag named 'Work'."
+            code: TAG_NAME_DUPLICATE
