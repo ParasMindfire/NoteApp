@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique @db.VarChar(255)
-  passwordHash  String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id                String             @id @default(cuid())
+  email             String             @unique @db.VarChar(255)
+  passwordHash      String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  refreshTokens     RefreshToken[]
+  passwordResetOtps PasswordResetOtp[]
 }
 
 model RefreshToken {
@@ -24,4 +25,18 @@ model RefreshToken {
   revokedAt DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetOtp {
+  id            String    @id @default(cuid())
+  userId        String
+  otp           String    @db.VarChar(6)
+  expiresAt     DateTime
+  attemptsLeft  Int       @default(5)
+  invalidatedAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

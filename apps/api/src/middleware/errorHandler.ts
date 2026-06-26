@@ -17,6 +17,7 @@ const CODE_TITLES: Record<string, string> = {
   AUTH_INVALID_CREDENTIALS: 'Invalid credentials',
   AUTH_TOKEN_INVALID: 'Unauthorized',
   AUTH_REFRESH_INVALID: 'Refresh token invalid',
+  AUTH_OTP_INVALID: 'Invalid or expired OTP',
   RATE_LIMITED: 'Too many requests',
 };
 
