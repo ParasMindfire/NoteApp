@@ -1,18 +1,25 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const srcDir = path.resolve(__dirname, 'src');
+
 export default defineConfig({
-  plugins: [react()],
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'react',
+  },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
+    alias: { '@': srcDir },
   },
   test: {
+    name: 'web',
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test-setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: ['src/test-setup.ts'],
+    alias: { '@': srcDir },
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
