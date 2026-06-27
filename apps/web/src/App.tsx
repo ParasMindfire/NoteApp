@@ -4,6 +4,7 @@ import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
+import { NotesPage } from '@/pages/notes/NotesPage';
 
 const router = createBrowserRouter([
   {
@@ -29,7 +30,7 @@ const router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      { path: '/notes', element: <div>Coming soon</div> },
+      { path: '/notes', element: <NotesPage /> },
       { path: '/notes/new', element: <div>Coming soon</div> },
       { path: '/notes/:id', element: <div>Coming soon</div> },
       { path: '/search', element: <div>Coming soon</div> },

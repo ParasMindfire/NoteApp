@@ -6,6 +6,7 @@ export const errorMessages: Record<string, string> = {
   RATE_LIMITED: 'Too many attempts. Please wait a moment.',
   AUTH_REFRESH_INVALID: 'Your session has expired. Please log in again.',
   AUTH_TOKEN_INVALID: 'Your session has expired. Please log in again.',
+  INVALID_TAG: 'One or more selected tags are invalid. Filter cleared.',
 };
 
 export function getErrorMessage(code: string | undefined): string {

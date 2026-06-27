@@ -14,6 +14,7 @@
     "@noteapp/shared": "workspace:*",
     "@hookform/resolvers": "3.9.1",
     "@radix-ui/react-label": "2.1.0",
+    "@radix-ui/react-select": "2.1.7",
     "@radix-ui/react-slot": "1.1.0",
     "@tanstack/react-query": "5.101.1",
     "@tiptap/react": "2.11.7",
