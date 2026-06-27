@@ -21,3 +21,13 @@ export interface PaginatedNotes {
   items: Note[];
   nextCursor: string | null;
 }
+
+export interface SearchResult {
+  note: Note;
+  headline: string;
+}
+
+export interface PaginatedSearchResults {
+  items: SearchResult[];
+  nextCursor: string | null;
+}

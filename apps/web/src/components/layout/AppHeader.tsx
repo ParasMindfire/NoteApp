@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { queryClient } from '@/lib/queryClient';
@@ -34,6 +34,13 @@ export function AppHeader() {
           NoteApp
         </Link>
         <nav className="flex items-center gap-4">
+          <Link
+            to="/search"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden="true" />
+            Search
+          </Link>
           <span
             aria-disabled="true"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground cursor-not-allowed opacity-50 select-none"

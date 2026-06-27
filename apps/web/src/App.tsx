@@ -6,6 +6,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { NotesPage } from '@/pages/notes/NotesPage';
 import { NoteEditorPage } from '@/pages/notes/NoteEditorPage';
+import { SearchPage } from '@/pages/search/SearchPage';
 
 const router = createBrowserRouter([
   {
@@ -34,7 +35,7 @@ const router = createBrowserRouter([
       { path: '/notes', element: <NotesPage /> },
       { path: '/notes/new', element: <NoteEditorPage /> },
       { path: '/notes/:id', element: <NoteEditorPage /> },
-      { path: '/search', element: <div>Coming soon</div> },
+      { path: '/search', element: <SearchPage /> },
     ],
   },
 ]);
