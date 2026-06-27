@@ -7,6 +7,8 @@ export const errorMessages: Record<string, string> = {
   AUTH_REFRESH_INVALID: 'Your session has expired. Please log in again.',
   AUTH_TOKEN_INVALID: 'Your session has expired. Please log in again.',
   INVALID_TAG: 'One or more selected tags are invalid. Filter cleared.',
+  NOTE_NOT_FOUND: 'Note not found.',
+  TAG_NAME_DUPLICATE: '',
 };
 
 export function getErrorMessage(code: string | undefined): string {

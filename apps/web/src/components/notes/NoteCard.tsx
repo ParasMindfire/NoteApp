@@ -30,7 +30,7 @@ export function NoteCard({ note }: NoteCardProps) {
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1 overflow-hidden">
-          {note.tags.map((tag) => (
+          {(note.tags ?? []).map((tag) => (
             <TagChip key={tag.id} id={tag.id} name={tag.name} color={tag.color} readonly />
           ))}
         </div>
