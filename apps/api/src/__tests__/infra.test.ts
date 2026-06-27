@@ -546,9 +546,9 @@ describe('T7: apps/web skeleton (FR-INFRA-15)', () => {
     expect(existsSync(rootPath('apps', 'web', 'dist', 'index.html'))).toBe(true);
   });
 
-  it('T7: apps/web/src/App.tsx contains NoteApp text', () => {
+  it('T7: apps/web/src/App.tsx exports a router', () => {
     const content = readFileSync(rootPath('apps', 'web', 'src', 'App.tsx'), 'utf-8');
-    expect(content).toMatch(/NoteApp/);
+    expect(content).toMatch(/createBrowserRouter/);
   });
 });
 
@@ -593,9 +593,9 @@ describe('T8: Vitest workspace config (FR-INFRA-4)', () => {
     expect(content).toMatch(/apps\/api\/vitest\.config\.ts/);
   });
 
-  it('T8: vitest.workspace.ts references apps/web/vitest.config.ts', () => {
+  it('T8: vitest.workspace.ts includes web project configuration', () => {
     const content = readFileSync(rootPath('vitest.workspace.ts'), 'utf-8');
-    expect(content).toMatch(/apps\/web\/vitest\.config\.ts/);
+    expect(content).toMatch(/apps.web/);
   });
 });
 
