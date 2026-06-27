@@ -24,6 +24,8 @@
     - Heading: "<Resource> yet"  (e.g., "No notes yet")
     - Subtext: short prompt
     - Primary action button (e.g., "Create your first note")
+- Exception (AB-1013): search no-results state omits the primary action button — the
+  search input already provides the recovery path ("try different keywords").
 
 ## Form Patterns
 - Client-side validation with Zod schemas imported from packages/shared.
