@@ -15,5 +15,18 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
     }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx code-review-graph update --repo C:\\Users\\parasb\\Desktop\\Paras\\Projects\\SDD\\NoteApp"
+          }
+        ]
+      }
+    ]
   }
 }

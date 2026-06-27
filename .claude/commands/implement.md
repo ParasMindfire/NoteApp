@@ -16,11 +16,23 @@ Preconditions:
    - If E2E: read SDS.md and UX.md
 4. Ensure .openspec/changes/{ticket}/review-log.md exists (create empty if not).
 5. Ensure .openspec/changes/{ticket}/fix-bundles.md exists (create empty if not).
+6. GRAPH ORIENTATION (once per ticket, before first task):
+   - Run detect_changes → note which files changed + risk scores.
+   - Run get_architecture_overview → identify which layers this ticket touches.
+   - Run semantic_search_nodes for key symbols in this ticket (e.g., route names, model names).
+   This replaces reading multiple files cold. Only fall back to Read/Grep if the graph
+   doesn't return enough detail.
 
 EXECUTION LOOP — for each unchecked task in tasks.md, in order:
 
   STEP 1 — Implement the task yourself
     - State which task and which scenarios it satisfies.
+    - GRAPH LOOKUP FIRST: Before reading any file, run:
+        • semantic_search_nodes — find the exact functions/classes to edit
+        • get_minimal_context — get only the relevant code snippet
+        • get_impact_radius — check blast radius before editing shared code
+        • query_graph pattern=callers_of — see what calls the function you're changing
+      Only open a file with Read after graph tools confirm it's the right one.
     - Use Context7 MCP for every external library API call.
     - Ask [y/n] before each file write.
     - Write the implementation code (NOT tests — tester handles those).
@@ -28,6 +40,9 @@ EXECUTION LOOP — for each unchecked task in tasks.md, in order:
     - If typecheck or lint fails, fix before proceeding.
 
   STEP 2 — Invoke TESTER agent (brief varies by ticket type)
+    Include in every tester brief: "Use query_graph pattern=tests_for to find
+    existing test files for each function before reading anything. Use
+    semantic_search_nodes to locate functions under test."
     The tester ALWAYS reads FRS.md in addition to spec.md, because each
     scenario in spec.md tags the FR it validates (e.g., "Validates:
     FR-AUTH-2 no-leak clause"). The FR block in FRS.md contains
@@ -103,6 +118,9 @@ EXECUTION LOOP — for each unchecked task in tasks.md, in order:
     Wait for tester. Capture: tests written, passing/failing, failure details.
 
   STEP 3 — Invoke REVIEWER agent (brief varies by ticket type)
+    Include in every reviewer brief: "Use detect_changes + get_review_context
+    to get code snippets for review instead of reading full files. Use
+    get_impact_radius to check if changes affect callers outside this task's scope."
     INFRA ticket — spawn reviewer with brief:
       "Audit project setup against spec.md and FRS.md FR-INFRA-* items.
        Output findings:
