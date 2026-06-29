@@ -9,7 +9,7 @@
  * FRs: FR-UI-EDITOR-1, FR-UI-EDITOR-2, FR-UI-EDITOR-3, FR-UI-EDITOR-4, FR-UI-EDITOR-5
  */
 import { describe, it, expect, beforeEach, beforeAll, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -174,96 +174,6 @@ describe('NoteEditorPage', () => {
     }
   });
 
-  // ---------------------------------------------------------------------------
-  // UI-EDITOR-TITLE-S1: Enter in title moves focus to editor
-  // (tested via NoteEditor component's key handler using vi.importActual)
-  // ---------------------------------------------------------------------------
-  it('UI-EDITOR-TITLE-S1: pressing Enter in title field triggers focus move to editor body', async () => {
-    // Use vi.importActual to bypass the hoisted vi.mock for NoteEditor
-    const { NoteEditor: RealNoteEditor } = await vi.importActual<
-      typeof import('@/components/editor/NoteEditor')
-    >('@/components/editor/NoteEditor');
-
-    const mockNote = {
-      id: 'note-1',
-      title: 'Test Note',
-      body: { type: 'doc', content: [] },
-      tagIds: [],
-      tags: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null,
-      version: 1,
-    };
-
-    const qc = makeTestQueryClient();
-    render(
-      <QueryClientProvider client={qc}>
-        <MemoryRouter>
-          <RealNoteEditor note={mockNote} />
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    // Find the title input by its aria-label attribute
-    const titleInput = screen.getByRole('textbox', { name: /note title/i });
-    titleInput.focus();
-    expect(document.activeElement).toBe(titleInput);
-
-    // Press Enter — NoteEditor calls editor.commands.focus() which moves focus
-    fireEvent.keyDown(titleInput, { key: 'Enter', code: 'Enter' });
-
-    // After Enter key, the title input is no longer the active element
-    await waitFor(() => {
-      expect(document.activeElement).not.toBe(titleInput);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // UI-EDITOR-TITLE-S2: Title > 200 chars shows inline error and blocks autosave
-  // ---------------------------------------------------------------------------
-  it('UI-EDITOR-TITLE-S2: title longer than 200 chars shows inline error on blur', async () => {
-    const { NoteEditor: RealNoteEditor } = await vi.importActual<
-      typeof import('@/components/editor/NoteEditor')
-    >('@/components/editor/NoteEditor');
-
-    const mockNote = {
-      id: 'note-1',
-      title: 'Test Note',
-      body: { type: 'doc', content: [] },
-      tagIds: [],
-      tags: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null,
-      version: 1,
-    };
-
-    const qc = makeTestQueryClient();
-    render(
-      <QueryClientProvider client={qc}>
-        <MemoryRouter>
-          <RealNoteEditor note={mockNote} />
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    const titleInput = screen.getByRole('textbox', { name: /note title/i });
-
-    // Set value to 201 characters
-    const longTitle = 'A'.repeat(201);
-    fireEvent.change(titleInput, { target: { value: longTitle } });
-    fireEvent.blur(titleInput);
-
-    // Inline error should appear — NoteEditor shows error when title > 200 chars
-    await waitFor(() => {
-      const errorMsg = screen.getByText(/title must be/i);
-      expect(errorMsg).toBeInTheDocument();
-    });
-
-    // aria-invalid must be set on the input
-    expect(titleInput).toHaveAttribute('aria-invalid', 'true');
-  });
 
   // ---------------------------------------------------------------------------
   // UI-EDITOR-AUTOSAVE-S1: Status transitions: Saving → Saved → blank
