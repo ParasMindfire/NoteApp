@@ -591,7 +591,7 @@ and slims `routes/auth/*.ts` to pure wiring.
 
 ### FR-UI-VER-2: Version list [AB-1015]
 - **Display:** GET /notes/:id/versions → list newest-first
-- **Each item:** version number, savedAt (relative time via date-fns "2 hours ago"), title preview, first 80 chars of body
+- **Each item:** version number, savedAt (relative time via date-fns "2 hours ago"), title preview
 - **Acceptance:** scenarios UI-VER-LIST-S1..S2 pass
 
 ### FR-UI-VER-3: Version preview [AB-1015]
