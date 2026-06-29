@@ -10,6 +10,7 @@ export const errorMessages: Record<string, string> = {
   NOTE_NOT_FOUND: 'Note not found.',
   TAG_NAME_DUPLICATE: '',
   SEARCH_FAILED: 'Search failed. Please try again.',
+  SHARE_NOT_FOUND: 'Share link not found.',
 };
 
 export function getErrorMessage(code: string | undefined): string {

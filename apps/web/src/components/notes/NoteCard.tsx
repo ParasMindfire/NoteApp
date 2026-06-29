@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Share2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { extractPlainText } from '@/lib/noteUtils';
 import { TagChip } from './TagChip';
+import { ShareModal } from '@/components/share/ShareModal';
 import type { Note } from '@/types/notes';
 
 interface NoteCardProps {
@@ -10,6 +12,7 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note }: NoteCardProps) {
+  const [shareOpen, setShareOpen] = useState(false);
   const preview = extractPlainText(note.body);
   const updatedAgo = formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true });
 
@@ -40,13 +43,14 @@ export function NoteCard({ note }: NoteCardProps) {
           <button
             type="button"
             aria-label="Share note"
-            onClick={() => {}}
+            onClick={() => setShareOpen(true)}
             className="rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>
+      <ShareModal noteId={note.id} open={shareOpen} onOpenChange={setShareOpen} />
     </article>
   );
 }
