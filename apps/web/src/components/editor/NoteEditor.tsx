@@ -9,6 +9,7 @@ import { EditorStatusIndicator } from './EditorStatusIndicator';
 import { TagCombobox } from './TagCombobox';
 import { useAutosave } from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
+import { ShareModal } from '@/components/share/ShareModal';
 import type { Note } from '@/types/notes';
 import type { Draft } from '@/stores/draftStore';
 
@@ -22,6 +23,7 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
   const [title, setTitle] = useState(note.title);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>(note.tagIds);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const titleRef = useRef(note.title);
   const tagIdsRef = useRef(note.tagIds);
@@ -99,7 +101,7 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
             variant="ghost"
             size="sm"
             aria-label="Share note"
-            onClick={() => {}}
+            onClick={() => setShareOpen(true)}
           >
             <Share2 className="h-4 w-4" />
           </Button>
@@ -151,6 +153,8 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
           data-testid="editor-content"
         />
       </div>
+
+      <ShareModal noteId={note.id} open={shareOpen} onOpenChange={setShareOpen} />
     </div>
   );
 }
