@@ -3,11 +3,18 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { CreateNoteInput, UpdateNoteInput } from '@noteapp/shared';
 
+export interface NoteTagResponse {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface NoteResponse {
   id: string;
   title: string;
   body: Prisma.JsonValue;
   tagIds: string[];
+  tags: NoteTagResponse[];
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -20,7 +27,7 @@ export type NoteWithTags = {
   version: number;
   createdAt: Date;
   updatedAt: Date;
-  tags: { tagId: string }[];
+  tags: { tagId: string; tag: { id: string; name: string; color: string } }[];
 };
 
 export function toNoteResponse(note: NoteWithTags): NoteResponse {
@@ -29,6 +36,7 @@ export function toNoteResponse(note: NoteWithTags): NoteResponse {
     title: note.title,
     body: note.body,
     tagIds: note.tags.map((t) => t.tagId),
+    tags: note.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     version: note.version,
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
@@ -45,7 +53,7 @@ export async function assertNoteOwner(userId: string, noteId: string): Promise<N
       version: true,
       createdAt: true,
       updatedAt: true,
-      tags: { select: { tagId: true } },
+      tags: { select: { tagId: true, tag: { select: { id: true, name: true, color: true } } } },
     },
   });
   if (!note) throw new AppError(404, 'NOTE_NOT_FOUND', 'Note not found');
@@ -84,7 +92,7 @@ export async function createNote(
       version: true,
       createdAt: true,
       updatedAt: true,
-      tags: { select: { tagId: true } },
+      tags: { select: { tagId: true, tag: { select: { id: true, name: true, color: true } } } },
     },
   });
 
@@ -146,7 +154,7 @@ export async function updateNote(
         version: true,
         createdAt: true,
         updatedAt: true,
-        tags: { select: { tagId: true } },
+        tags: { select: { tagId: true, tag: { select: { id: true, name: true, color: true } } } },
       },
     });
   });
@@ -270,7 +278,7 @@ export async function listNotes(userId: string, input: ListNotesInput): Promise<
       version: true,
       createdAt: true,
       updatedAt: true,
-      tags: { select: { tagId: true } },
+      tags: { select: { tagId: true, tag: { select: { id: true, name: true, color: true } } } },
     },
   });
 

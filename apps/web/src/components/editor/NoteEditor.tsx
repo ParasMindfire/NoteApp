@@ -51,7 +51,12 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
   const tagIdsRef = useRef(note.tagIds);
   const bodyRef = useRef<Record<string, unknown>>(note.body as Record<string, unknown>);
 
-  const { scheduleAutoSave, retryNow } = useAutosave({ noteId: note.id });
+  const { scheduleAutoSave, retryNow } = useAutosave({
+    noteId: note.id,
+    onSuccess: (saved) => {
+      queryClient.setQueryData(['note', note.id], saved);
+    },
+  });
 
   // Keep ref current so editor onUpdate can read latest without stale closure
   const scheduleRef = useRef(scheduleAutoSave);
