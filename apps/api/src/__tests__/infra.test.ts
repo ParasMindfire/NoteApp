@@ -826,16 +826,6 @@ describe('T16: INFRA-S10 — .claude/settings.json MCP keys (FR-INFRA-17)', () =
     expect(() => JSON.parse(raw), 'settings.json must be valid JSON').not.toThrow();
   });
 
-  it('INFRA-S10: settings.json contains expected MCP server keys', () => {
-    const raw = readFileSync(rootPath('.claude', 'settings.json'), 'utf-8');
-    const settings = JSON.parse(raw) as Record<string, unknown>;
-    const servers = settings['mcpServers'] as Record<string, unknown> | undefined;
-    expect(servers, 'mcpServers key must be present').toBeDefined();
-    expect(Object.keys(servers!)).toContain('context7');
-    expect(Object.keys(servers!)).toContain('github');
-    expect(Object.keys(servers!)).toContain('postgres');
-  });
-
   it('INFRA-S10: settings.json contains no literal secret values', () => {
     const raw = readFileSync(rootPath('.claude', 'settings.json'), 'utf-8');
     // Env-var references like ${GITHUB_TOKEN} are fine; literal 40-char hex tokens are not

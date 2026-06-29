@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useMutation } from '@tanstack/react-query';
 import StarterKit from '@tiptap/starter-kit';
-import { Share2, History } from 'lucide-react';
+import { Share2, History, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EditorToolbar } from './EditorToolbar';
@@ -9,9 +12,11 @@ import { EditorStatusIndicator } from './EditorStatusIndicator';
 import { TagCombobox } from './TagCombobox';
 import { useAutosave } from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 import { queryClient } from '@/lib/queryClient';
 import { ShareModal } from '@/components/share/ShareModal';
 import { HistoryDrawer } from '@/components/history/HistoryDrawer';
+import { DeleteNoteDialog } from '@/components/notes/DeleteNoteDialog';
 import type { Note } from '@/types/notes';
 import type { Draft } from '@/stores/draftStore';
 
@@ -25,8 +30,22 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
   const [title, setTitle] = useState(note.title);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>(note.tagIds);
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/notes/${note.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      toast.success('Note moved to trash');
+      navigate('/notes');
+    },
+    onError: () => {
+      toast.error('Failed to delete note');
+    },
+  });
 
   const titleRef = useRef(note.title);
   const tagIdsRef = useRef(note.tagIds);
@@ -128,6 +147,18 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
           >
             <History className="h-4 w-4" />
           </Button>
+          {note.id && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Delete note"
+              onClick={() => setDeleteOpen(true)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -176,6 +207,13 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
         currentTitle={title}
         currentBody={bodyRef.current}
         onRestore={handleRestore}
+      />
+      <DeleteNoteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={() => deleteMutation.mutate()}
+        isPending={deleteMutation.isPending}
+        noteTitle={title}
       />
     </div>
   );
