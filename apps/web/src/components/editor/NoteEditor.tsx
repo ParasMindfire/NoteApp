@@ -9,7 +9,9 @@ import { EditorStatusIndicator } from './EditorStatusIndicator';
 import { TagCombobox } from './TagCombobox';
 import { useAutosave } from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
+import { queryClient } from '@/lib/queryClient';
 import { ShareModal } from '@/components/share/ShareModal';
+import { HistoryDrawer } from '@/components/history/HistoryDrawer';
 import type { Note } from '@/types/notes';
 import type { Draft } from '@/stores/draftStore';
 
@@ -24,6 +26,7 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
   const [titleError, setTitleError] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>(note.tagIds);
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const titleRef = useRef(note.title);
   const tagIdsRef = useRef(note.tagIds);
@@ -89,6 +92,17 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
     scheduleRef.current({ title: titleRef.current, body: bodyRef.current, tagIds: newTagIds });
   }, []);
 
+  const handleRestore = useCallback(
+    (restoredNote: Note) => {
+      setTitle(restoredNote.title);
+      titleRef.current = restoredNote.title;
+      editor?.commands.setContent(restoredNote.body);
+      bodyRef.current = restoredNote.body as Record<string, unknown>;
+      queryClient.invalidateQueries({ queryKey: ['note', note.id] });
+    },
+    [editor, note.id],
+  );
+
   return (
     <div className="flex h-full flex-col">
       {/* Editor header bar */}
@@ -110,7 +124,7 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
             variant="ghost"
             size="sm"
             aria-label="Version history"
-            onClick={() => {}}
+            onClick={() => setHistoryOpen(true)}
           >
             <History className="h-4 w-4" />
           </Button>
@@ -155,6 +169,14 @@ export function NoteEditor({ note, draftToRestore, onDraftConsumed }: NoteEditor
       </div>
 
       <ShareModal noteId={note.id} open={shareOpen} onOpenChange={setShareOpen} />
+      <HistoryDrawer
+        noteId={note.id}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        currentTitle={title}
+        currentBody={bodyRef.current}
+        onRestore={handleRestore}
+      />
     </div>
   );
 }

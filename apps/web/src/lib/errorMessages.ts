@@ -11,6 +11,7 @@ export const errorMessages: Record<string, string> = {
   TAG_NAME_DUPLICATE: '',
   SEARCH_FAILED: 'Search failed. Please try again.',
   SHARE_NOT_FOUND: 'Share link not found.',
+  VERSION_NOT_FOUND: 'Version not found.',
 };
 
 export function getErrorMessage(code: string | undefined): string {
