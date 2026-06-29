@@ -61,6 +61,7 @@ export function NoteEditorPage() {
     },
     onSuccess: (note) => {
       queryClient.setQueryData(['note', note.id], note);
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
       navigate(`/notes/${note.id}`, { replace: true });
     },
     onError: () => {

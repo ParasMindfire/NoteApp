@@ -80,7 +80,7 @@ export async function restoreVersion(
         version: true,
         createdAt: true,
         updatedAt: true,
-        tags: { select: { tagId: true } },
+        tags: { select: { tagId: true, tag: { select: { id: true, name: true, color: true } } } },
       },
     });
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { queryClient } from '@/lib/queryClient';
 import { useEditorStatusStore } from '@/stores/editorStatusStore';
 import { useDraftStore } from '@/stores/draftStore';
 import type { Note } from '@/types/notes';
@@ -26,6 +27,9 @@ export function useAutosave({ noteId, onSuccess }: UseAutosaveOptions) {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failureCountRef = useRef(0);
   const lastDataRef = useRef<AutosaveData | null>(null);
+  const pendingDataRef = useRef<AutosaveData | null>(null);
+  const noteIdRef = useRef(noteId);
+  noteIdRef.current = noteId;
 
   const save = useCallback(
     async (data: AutosaveData) => {
@@ -60,8 +64,12 @@ export function useAutosave({ noteId, onSuccess }: UseAutosaveOptions) {
     (data: AutosaveData) => {
       if (!noteId) return;
       if (data.title.length < 1 || data.title.length > 200) return;
+      pendingDataRef.current = data;
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => save(data), 2000);
+      debounceRef.current = setTimeout(() => {
+        pendingDataRef.current = null;
+        save(data);
+      }, 2000);
     },
     [noteId, save],
   );
@@ -78,6 +86,13 @@ export function useAutosave({ noteId, onSuccess }: UseAutosaveOptions) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      const pending = pendingDataRef.current;
+      const id = noteIdRef.current;
+      if (pending && id) {
+        api.patch<Note>(`/notes/${id}`, pending).then((res) => {
+          queryClient.setQueryData(['note', id], res.data);
+        }).catch(() => {});
+      }
     };
   }, []);
 

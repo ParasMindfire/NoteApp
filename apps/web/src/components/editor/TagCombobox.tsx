@@ -166,7 +166,7 @@ export function TagCombobox({ tagIds, onChange }: TagComboboxProps) {
                   ))}
                 </CommandGroup>
               )}
-              {inputValue && !hasExactMatch && filteredTags.length > 0 && (
+              {inputValue && !hasExactMatch && (
                 <CommandGroup>
                   <CommandItem
                     value={`__create__${inputValue}`}

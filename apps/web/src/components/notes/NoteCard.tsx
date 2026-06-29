@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Share2 } from 'lucide-react';
+import { Share2, Trash2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 import { extractPlainText } from '@/lib/noteUtils';
+import { api } from '@/lib/api';
+import { queryClient } from '@/lib/queryClient';
 import { TagChip } from './TagChip';
 import { ShareModal } from '@/components/share/ShareModal';
+import { DeleteNoteDialog } from './DeleteNoteDialog';
 import type { Note } from '@/types/notes';
 
 interface NoteCardProps {
@@ -13,8 +18,21 @@ interface NoteCardProps {
 
 export function NoteCard({ note }: NoteCardProps) {
   const [shareOpen, setShareOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const preview = extractPlainText(note.body);
   const updatedAgo = formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/notes/${note.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      toast.success('Note moved to trash');
+      setDeleteOpen(false);
+    },
+    onError: () => {
+      toast.error('Failed to delete note');
+    },
+  });
 
   return (
     <article className="relative rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
@@ -42,6 +60,14 @@ export function NoteCard({ note }: NoteCardProps) {
           <span className="text-xs text-muted-foreground whitespace-nowrap">{updatedAgo}</span>
           <button
             type="button"
+            aria-label="Delete note"
+            onClick={() => setDeleteOpen(true)}
+            className="rounded p-1 text-muted-foreground hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             aria-label="Share note"
             onClick={() => setShareOpen(true)}
             className="rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -51,6 +77,13 @@ export function NoteCard({ note }: NoteCardProps) {
         </div>
       </div>
       <ShareModal noteId={note.id} open={shareOpen} onOpenChange={setShareOpen} />
+      <DeleteNoteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={() => deleteMutation.mutate()}
+        isPending={deleteMutation.isPending}
+        noteTitle={note.title}
+      />
     </article>
   );
 }
